@@ -1,0 +1,14 @@
+# Personal data — never commit
+secrets.nix
+
+# Nix build results
+result
+result-*
+
+# Direnv
+.direnv/
+
+# Editors
+.vscode/
+.idea/
+*.swp

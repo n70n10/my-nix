@@ -1,0 +1,13 @@
+{
+    "colorscheme": "rose-pine",
+    "diffgutter": true,
+    "hlsearch": true,
+    "hltrailingws": true,
+    "keepautoindent": true,
+    "mkparents": true,
+    "relativeruler": true,
+    "reload": "auto",
+    "scrollbar": true,
+    "softwrap": true,
+    "wordwrap": true
+}
