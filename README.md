@@ -9,18 +9,16 @@ Flake-based NixOS config with Fish shell, KDE Plasma 6, and devshells for Go and
 git clone git@github.com:n70n10/mynix.git
 cd mynix
 
-# 2. Fill in your personal data (includes git identity — no separate gitconfig needed)
-sudo cp secrets.nix.example /etc/nixos/secrets.nix
-$EDITOR /etc/nixos/secrets.nix
+# 2. Fill in your personal data (includes git identity)
+$EDITOR ./nixsec/secrets.nix
 
-# 3. Generate hardware config
-sudo mkdir -p /etc/nixos/hosts/
-sudo nixos-generate-config --show-hardware-config | sudo tee /etc/nixos/hosts/hardware-configuration.nix > /dev/null
+# 3. Generate hardware config (if not present)
+nixos-generate-config --show-hardware-config | tee ./nixsec/hardware-configuration.nix > /dev/null
 
-# 4. Deploy NixOS config (including home.nix and dotfiles) to /etc/nixos
-./deploy.sh
+# 4. ***IMPORTANT*** mark nixsec files as unchanged!
+git ls-files -z ./nixsec | xargs -0 git update-index --assume-unchanged
 
-# 5. Build, switch, and activate Home Manager
+# 5. Build, switch, and activate Home Manager (may need #<hostmane> the 1st time)
 sudo nixos-rebuild switch --flake /etc/nixos
 ```
 
@@ -32,24 +30,25 @@ sudo nixos-rebuild switch --flake /etc/nixos
 ├── home.nix                           # Home Manager config (dotfiles, git, fish)
 ├── git
 │   └── git.nix                        # Git config
-├── secrets.nix                        # Personal data (gitignored)
 ├── secrets.nix.example                # Template — commit this
 ├── deploy.sh                          # Syncs repo → /etc/nixos
 ├── .gitignore
 ├── hosts/
 │   ├── common.nix                     # Shared config (Plasma, gaming, SSH…)
 │   ├── amd.nix                        # AMD GPU + microcode
-│   ├── nvidia.nix                     # NVIDIA GPU + proprietary driver
-│   └── hardware-configuration.nix     # generated — not in repo
+│   └── nvidia.nix                     # NVIDIA GPU + proprietary driver
 ├── dotfiles/
 │   └── fish/
 │       ├── config.fish
 │       └── conf.d/
 │           └── functions.fish
 │   └── ...
-└── devshells/
-    ├── go.nix                         # Go toolchain + tools
-    └── rust.nix                       # Rust via rustup + tools
+├── devshells/
+│   ├── go.nix                         # Go toolchain + tools
+│   └── rust.nix                       # Rust via rustup + tools
+└── nixsec/
+    ├── hardware-configuration.nix     # cp from /etc/nixos
+    └── secrets.nix                    # Full name, email, locale etc.
 ```
 
 ## secrets.nix
@@ -61,25 +60,32 @@ separate `gitconfig` file is needed.
 
 ```nix
 {
-  username        = "your-username";
-  fullName        = "Your Name";
-  email           = "you@example.com";
-  timezone        = "Europe/Rome";
-  locale          = "en_US.UTF-8";
-  extraLocale     = {};
+  username = "your-username";
+  fullName = "Your Full Name";
+  email    = "your@email.com";
+
+  # Locale / timezone — find yours with `timedatectl list-timezones`
+  timezone  = "Europe/Rome";
+  locale    = "en_US.UTF-8";
+
+  # Extra locale overrides — remove keys you don't need, or set to {}
+  extraLocale = {};
+
+  # Keyboard — run `localectl list-keymaps` for console maps,
+  # `localectl list-x11-keymap-layouts` for X11/Wayland layouts
   keyboardLayout  = "us";
   keyboardVariant = "";
-  sshPublicKey    = "ssh-ed25519 AAAA...";
-  hostname        = "my-hostname";   # networking.hostName for this machine
-  gpu             = "amd";           # host file to load: amd or nvidia
+
+  # Machine identity — keep this out of the repo
+  hostname = "my-hostname";   # used for networking.hostName
+  gpu      = "amd";           # host file to load: amd or nvidia
+
+  # Nixos config path
+  nixosConfigPath = "${HOME}mynix";
+
+  # SSH public key for authorized_keys
+  sshPublicKey = "ssh-ed25519 AAAA... your-key-comment";
 }
-```
-
-## Deploying config changes
-
-```
-./deploy.sh   # syncs repo → /etc/nixos
-nrs           # nixos-rebuild switch (also activates Home Manager)
 ```
 
 ## Dotfiles
@@ -111,9 +117,13 @@ use flake /etc/nixos#go
 | `ls` | `eza` with icons, directories first |
 | `ll` | `eza -la` with icons and git status |
 | `lt` / `lta` | tree view 2 levels, with/without hidden |
+| `tree` | `eza` tree, all files, excluding `.git` |
 | `cat` | `bat` with syntax highlighting |
 | `grep` / `find` | `ripgrep` / `fd` |
 | `top` / `df` / `du` | `btop` / `duf` / `gdu` |
+| `mi` | `micro` |
+| `vi` / `vim` | `nvim` |
+| `sv` | `sudo nvim` |
 | `g` / `gs` / `ga` / `gaa` | `git` / `status` / `add` / `add -A` |
 | `gc` / `gcm` / `gca` | `commit` / `commit -m` / `commit --amend` |
 | `gco` / `gcob` | `checkout` / `checkout -b` |
@@ -121,8 +131,11 @@ use flake /etc/nixos#go
 | `gl` / `gd` / `gds` | log graph / `diff` / `diff --staged` |
 | `grb` / `gst` / `gstp` | `rebase` / `stash` / `stash pop` |
 | `lg` | `lazygit` |
+| `nrs` / `nrt` / `nrb` | rebuild switch / test / boot (from repo root) |
+| `nup` | `nix flake update` + rebuild switch |
+| `ngens` | list system generations |
+| `nrollback` | roll back to previous generation |
 | `nfu` / `nfc` / `ngc` | flake update / check / garbage-collect |
-| `nsh <pkg>` | `nix shell nixpkgs#<pkg>` — ephemeral shell |
 | `ndev` | `nix develop` |
 | `gob` / `got` / `gotr` / `gotv` | `go build` / `test` / `test -race` / `test -v` |
 | `gom` / `gor` / `gogen` | `go mod tidy` / `go run .` / `go generate` |
@@ -134,15 +147,12 @@ use flake /etc/nixos#go
 
 | Function | Does |
 | --- | --- |
-| `nrs` / `nrt` / `nrb` | rebuild switch / test / boot — auto-detects hostname, works from anywhere |
-| `nup` | `nix flake update` + rebuild in one step |
 | `ndiff` | diff current system vs what the next rebuild would produce |
-| `nrollback` | roll back to the previous generation |
-| `ngens` | list all system generations |
+| `nsh <pkg>` | `nix shell nixpkgs#<pkg>` — ephemeral shell |
+| `dev [name]` | `nix develop [.#name]` |
 | `mkcd <dir>` | `mkdir -p` + `cd` in one step |
 | `fcd` | fuzzy `cd` into any subdirectory using fzf |
 | `fe` | fuzzy open a file in `$EDITOR` using fzf |
-| `dev [name]` | `nix develop [.#name]` |
 | `bak <file>` | copy `<file>` to `<file>.bak` |
 | `ex <archive>` | extract any archive (tar, zip, 7z, zst, gz…) |
 | `every <s> <cmd>` | repeat `<cmd>` every `<s>` seconds |

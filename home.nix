@@ -1,5 +1,9 @@
 { pkgs, config, secrets, ... }:
 
+let
+  repoPath = secrets.nixosConfigPath;
+  liveLink = path: config.lib.file.mkOutOfStoreSymlink "${repoPath}/${path}";
+in
 {
   imports = [
     ./home/git.nix
@@ -10,7 +14,7 @@
 
   # ── Fish ──────────────────────────────────────────────────────────────────
   programs.fish = {
-    enable = true;  # activates HM's fish module
+    enable = true;
     plugins = [
       { name = "tide";     src = pkgs.fishPlugins.tide.src; }
       { name = "fzf-fish"; src = pkgs.fishPlugins.fzf-fish.src; }
@@ -18,8 +22,8 @@
       { name = "done";     src = pkgs.fishPlugins.done.src; }
     ];
     interactiveShellInit = ''
-      ${builtins.readFile ./dotfiles/fish/config.fish}
-      ${builtins.readFile ./dotfiles/fish/conf.d/functions.fish}
+      source ${secrets.nixosConfigPath}/dotfiles/fish/config.fish
+      source ${secrets.nixosConfigPath}/dotfiles/fish/conf.d/functions.fish
     '';
   };
 
@@ -43,15 +47,14 @@
     ];
 
     file = {
-      # Micro
-      ".config/micro/settings.json".source         = ./dotfiles/micro/settings.json;
-      ".config/micro/bindings.json".source         = ./dotfiles/micro/bindings.json;
-
-      # Neovim
-      ".config/nvim".source                        = ./dotfiles/nvim;
-
-      # Ghostty
-      ".config/ghostty".source                     = ./dotfiles/ghostty;
+      # ── Micro ─────────────────────────────────────────────────────────────────
+      ".config/micro/settings.json".source                = liveLink "dotfiles/micro/settings.json";
+      ".config/micro/bindings.json".source                = liveLink "dotfiles/micro/bindings.json";
+      ".config/micro/colorschemes/rose-pine.micro".source = liveLink "dotfiles/micro/colorschemes/rose-pine.micro";
+      # ── Neovim ────────────────────────────────────────────────────────────────
+      ".config/nvim".source                               = liveLink "dotfiles/nvim";
+      # ── Ghostty ───────────────────────────────────────────────────────────────
+      ".config/ghostty".source                            = liveLink "dotfiles/ghostty";
     };
 
     sessionPath = [ "$HOME/.local/bin" ];

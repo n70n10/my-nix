@@ -63,7 +63,6 @@
       "result" "result-*"
       "vendor/"
       "target/"
-      "secrets.nix"
       "*.env" ".env*"
     ];
   };

@@ -3,37 +3,37 @@
 
 # ── NixOS rebuild helpers ─────────────────────────────────────────────────────
 
-function nrs --description 'nixos-rebuild switch'
-    sudo nixos-rebuild switch --flake /etc/nixos $argv
-end
+#function nrs --description 'nixos-rebuild switch'
+#    sudo nixos-rebuild switch --flake /etc/nixos $argv
+#end
 
-function nrt --description 'nixos-rebuild test'
-    sudo nixos-rebuild test --flake /etc/nixos $argv
-end
+#function nrt --description 'nixos-rebuild test'
+#    sudo nixos-rebuild test --flake /etc/nixos $argv
+#end
 
-function nrb --description 'nixos-rebuild boot'
-    sudo nixos-rebuild boot --flake /etc/nixos $argv
-end
+#function nrb --description 'nixos-rebuild boot'
+#    sudo nixos-rebuild boot --flake /etc/nixos $argv
+#end
 
-function nup --description 'flake update + rebuild switch'
-    pushd /etc/nixos
-    nix flake update
-    sudo nixos-rebuild switch --flake /etc/nixos $argv
-    popd
-end
+#function nup --description 'flake update + rebuild switch'
+#    pushd /etc/nixos
+#    nix flake update
+#    sudo nixos-rebuild switch --flake /etc/nixos $argv
+#    popd
+#end
+
+#function nrollback --description 'roll back to previous generation'
+#    sudo nixos-rebuild switch --rollback
+#end
+
+#function ngens --description 'list system generations'
+#    sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+#end
 
 function ndiff --description 'diff current system vs next rebuild'
     set next (nix build /etc/nixos#nixosConfigurations.default.config.system.build.toplevel \
         --no-link --print-out-paths 2>/dev/null)
     nvd diff /run/current-system $next
-end
-
-function nrollback --description 'roll back to previous generation'
-    sudo nixos-rebuild switch --rollback
-end
-
-function ngens --description 'list system generations'
-    sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
 end
 
 function nsh --description 'ephemeral nix shell: nsh <pkg>'

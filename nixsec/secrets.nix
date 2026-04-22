@@ -1,5 +1,3 @@
-# Copy this file to secrets.nix and fill in your details.
-# secrets.nix is listed in .gitignore and will never be committed.
 {
   username = "your-username";
   fullName = "Your Full Name";
@@ -20,6 +18,9 @@
   # Machine identity — keep this out of the repo
   hostname = "my-hostname";   # used for networking.hostName
   gpu      = "amd";           # host file to load: amd or nvidia
+
+  # Nixos config path
+  nixosConfigPath = "${HOME}mynix";
 
   # SSH public key for authorized_keys
   sshPublicKey = "ssh-ed25519 AAAA... your-key-comment";

@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 {
-  imports = [ ./hardware-configuration.nix ];
+  # imports = [ ./hardware-configuration.nix ];
 
   # ── AMD GPU ──────────────────────────────────────────────────────────────────
   hardware.graphics = {

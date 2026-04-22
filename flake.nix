@@ -11,7 +11,7 @@
 
   outputs = { self, nixpkgs, ... } @ inputs:
     let
-      secrets = import ./secrets.nix;
+      secrets = import ./nixsec/secrets.nix;
 
       sharedArgs = {
         inherit inputs secrets;
@@ -21,6 +21,7 @@
         inherit system;
         specialArgs = sharedArgs // { hostname = secrets.hostname; };
         modules = [
+          ./nixsec/hardware-configuration.nix
           ./hosts/common.nix
           ./hosts/${secrets.gpu}.nix
           inputs.home-manager.nixosModules.home-manager {

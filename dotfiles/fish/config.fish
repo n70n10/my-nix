@@ -28,6 +28,7 @@ abbr -a du   'gdu'
 abbr -a mi   'micro'
 abbr -a vi   'nvim'
 abbr -a vim  'nvim'
+abbr -a sv   'sudo nvim'
 
 # git
 abbr -a g    'git'
@@ -51,6 +52,12 @@ abbr -a gstp 'git stash pop'
 abbr -a lg   'lazygit'
 
 # nix
+abbr -a nrs  'sudo nixos-rebuild switch --flake .'
+abbr -a nrt  'sudo nixos-rebuild test --flake .'
+abbr -a nrb  'sudo nixos-rebuild boot --flake .'
+abbr -a nup  'nix flake update && sudo nixos-rebuild switch --flake .'
+abbr -a ngens 'sudo nix-env --list-generations --profile /nix/var/nix/profiles/system'
+abbr -a nrollback 'sudo nixos-rebuild switch --rollback'
 abbr -a nfu  'nix flake update'
 abbr -a nfc  'nix flake check'
 abbr -a ngc  'sudo nix-collect-garbage -d'
