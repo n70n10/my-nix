@@ -86,12 +86,10 @@
   # ── Desktop: KDE Plasma 6 ────────────────────────────────────────────────────
   services.desktopManager.plasma6.enable = true;
 
-  # Plasma Login Manager (unstable only — replaces SDDM on nixos-unstable)
-  # Note: SDDM is no longer supported on nixos-unstable when using Plasma 6.
+  # Plasma Login Manager
   services.displayManager.plasma-login-manager.enable = true;
 
   # ── Sound: PipeWire ──────────────────────────────────────────────────────────
-  # Plasma 6 enables PipeWire automatically; these are explicit for clarity.
   services.pulseaudio.enable = false;
   security.rtkit.enable      = true;
   services.pipewire = {
@@ -113,6 +111,7 @@
 
   # ── Applications ──────────────────────────────────────────────────────────
   programs.firefox.enable = true;
+
   programs.steam = {
     enable                         = true;
     remotePlay.openFirewall        = true;
@@ -123,6 +122,16 @@
 
   programs.gamemode.enable = true;
 
+  programs.nh = {
+    enable = true;
+    flake = "/etc/nixos";
+
+    clean = {
+      enable = true;
+      extraArgs = "--keep-since 7d --keep 3";
+    };
+  };
+
   # ── Nix ──────────────────────────────────────────────────────────────────────
   nix = {
     settings = {
@@ -130,11 +139,11 @@
       auto-optimise-store   = true;
       trusted-users         = [ "root" secrets.username ];
     };
-    gc = {
-      automatic = true;
-      dates     = "weekly";
-      options   = "--delete-older-than 14d";
-    };
+    # gc = {                                   # Removing because it conflicts with nh clean
+    #   automatic = true;
+    #   dates     = "weekly";
+    #   options   = "--delete-older-than 14d";
+    # };
   };
 
   nixpkgs.config.allowUnfree = true;

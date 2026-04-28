@@ -101,7 +101,6 @@ Or use direnv — drop a `.envrc` in your project:
 ```
 use flake /etc/nixos#go
 ```
-
 ## Fish aliases & functions
 
 ### Aliases
@@ -192,21 +191,22 @@ use flake /etc/nixos#go
 
 ### Functions
 
-**NixOS rebuild helpers**
+**NixOS helpers**
 | Function | Does |
 | --- | --- |
-| `nrs [path] [host]` | `nixos-rebuild switch` — defaults to `/etc/nixos` and current hostname |
-| `nrt [path] [host]` | `nixos-rebuild test` |
-| `nrb [path] [host]` | `nixos-rebuild boot` |
-| `nup [path] [host]` | `nix flake update` + rebuild switch (runs in flake directory) |
-| `nfu [path]` | `nix flake update` |
-| `nfc [path]` | `nix flake check` |
-| `nrollback` | roll back to previous generation |
-| `ngens` | list system generations |
-| `ndiff` | diff current system vs what the next rebuild would produce |
+| `nrs [path] [host]` | `nh os switch` — defaults to `/etc/nixos` and current hostname. Shows diff preview before applying. |
+| `nrt [path] [host]` | `nh os test` — test a configuration without making it permanent |
+| `nrb [path] [host]` | `nh os boot` — build configuration for next boot |
+| `nup [path] [host]` | `nix flake update` + `nh os switch` — updates inputs and rebuilds in one step |
+| `nfu [path]` | `nix flake update` — updates flake inputs only |
+| `nfc [path]` | `nix flake check` — validates flake integrity |
+| `nrollback` | `nh os rollback` — revert to previous system generation |
+| `ngens` | `nh os info` — list system generations with timestamps |
+| `ncheck [path] [host]` | `nh os switch --dry` — preview changes without applying |
+| `nup-preview [path] [host]` | update flake and preview changes without applying |
 | `nsh <pkg>` | ephemeral `nix shell nixpkgs#<pkg>` |
 | `dev [name]` | `nix develop [.#name]` — without args runs default devshell |
-| `ngc <age>` | delete generations older than `<age>` (e.g., `7d`, `30d`) and garbage collect |
+| `ngc <age> [path] [host]` | delete generations older than `<age>` (e.g., `7d`, `30d`) and garbage collect. Uses `nh clean` when available. |
 
 **Filesystem helpers**
 | Function | Does |
@@ -219,6 +219,7 @@ use flake /etc/nixos#go
 
 **Git**
 | Function | Does |
+| --- | --- |
 | `gsquash <N> [msg]` | squash last N commits into a single commit; uses combined messages or custom message if provided |
 
 **Misc**

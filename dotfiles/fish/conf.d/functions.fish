@@ -1,8 +1,8 @@
 ## ~/.config/fish/conf.d/functions.fish
 
-# ── NixOS rebuild helpers ─────────────────────────────────────────────────────
+# ── NixOS helpers ─────────────────────────────────────────────────────────
 
-function nrs --description 'nixos-rebuild switch'
+function nrs --description 'nh os switch'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
@@ -10,7 +10,7 @@ function nrs --description 'nixos-rebuild switch'
     echo "📁 Path: $path"
     echo "🖥️  Host: $host"
 
-    sudo nixos-rebuild switch --flake $path#$host $argv[3..]
+    nh os switch $path -H $host $argv[3..]
 
     if test $status -eq 0
         echo "✅ System switched successfully!"
@@ -19,7 +19,7 @@ function nrs --description 'nixos-rebuild switch'
     end
 end
 
-function nrt --description 'nixos-rebuild test'
+function nrt --description 'nh os test'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
@@ -27,7 +27,7 @@ function nrt --description 'nixos-rebuild test'
     echo "📁 Path: $path"
     echo "🖥️  Host: $host"
 
-    sudo nixos-rebuild test --flake $path#$host $argv[3..]
+    nh os test $path -H $host $argv[3..]
 
     if test $status -eq 0
         echo "✅ System test successful! Run 'nrs' to make permanent."
@@ -36,7 +36,7 @@ function nrt --description 'nixos-rebuild test'
     end
 end
 
-function nrb --description 'nixos-rebuild boot'
+function nrb --description 'nh os boot'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
@@ -44,7 +44,7 @@ function nrb --description 'nixos-rebuild boot'
     echo "📁 Path: $path"
     echo "🖥️  Host: $host"
 
-    sudo nixos-rebuild boot --flake $path#$host $argv[3..]
+    nh os boot $path -H $host $argv[3..]
 
     if test $status -eq 0
         echo "✅ System built successfully! Reboot to apply changes."
@@ -53,7 +53,7 @@ function nrb --description 'nixos-rebuild boot'
     end
 end
 
-function nup --description 'flake update + rebuild switch'
+function nup --description 'flake update + nh rebuild switch'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
@@ -65,7 +65,7 @@ function nup --description 'flake update + rebuild switch'
     echo "📦 Updating flake inputs..."
     pushd $path
 
-    sudo nix flake update
+    nix flake update
 
     if test $status -ne 0
         echo "❌ Flake update failed!"
@@ -74,7 +74,7 @@ function nup --description 'flake update + rebuild switch'
     end
 
     echo "🔄 Rebuilding system with updated inputs..."
-    sudo nixos-rebuild switch --flake .#$host $argv[3..]
+    nh os switch . -H $host $argv[3..]
 
     popd
 
@@ -89,7 +89,7 @@ function nfu --description 'nix flake update'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
 
     echo "📦 Updating flake inputs in: $path"
-    sudo nix flake update --flake $path $argv[2..]
+    nix flake update --flake $path $argv[2..]
 
     if test $status -eq 0
         echo "✅ Flake inputs updated successfully!"
@@ -102,7 +102,7 @@ function nfc --description 'nix flake check'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
 
     echo "🔍 Checking flake integrity..."
-    sudo nix flake check $path $argv[2..]
+    nix flake check $path $argv[2..]
 
     if test $status -eq 0
         echo "✅ Flake check passed!"
@@ -111,9 +111,9 @@ function nfc --description 'nix flake check'
     end
 end
 
-function nrollback --description 'roll back to previous generation'
+function nrollback --description 'nh os rollback'
     echo "⏪ Rolling back to previous system generation..."
-    sudo nixos-rebuild switch --rollback
+    nh os rollback
 
     if test $status -eq 0
         echo "✅ Rollback successful! Previous generation is now active."
@@ -122,23 +122,47 @@ function nrollback --description 'roll back to previous generation'
     end
 end
 
-function ngens --description 'list system generations'
+function ngens --description 'nh os info (list generations)'
     echo "📋 Listing system generations:"
     echo "─────────────────────────────────"
-    sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+    nh os info
 end
 
-function ndiff --description 'diff current system vs next rebuild'
-    echo "🔍 Comparing current system with next build..."
-    set -l next (nix build /etc/nixos#nixosConfigurations.default.config.system.build.toplevel \
-        --no-link --print-out-paths 2>/dev/null)
+function ncheck --description 'preview changes before applying (nh dry)'
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
-    if test -z "$next"
-        echo "❌ Failed to build next system configuration"
+    echo "🔍 Checking what will change..."
+    nh os switch $path -H $host --dry
+end
+
+function nup-preview --description 'update flake and preview changes without applying'
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
+
+    if not test -d "$path"
+        echo "❌ Error: Directory '$path' does not exist"
         return 1
     end
 
-    nvd diff /run/current-system $next
+    echo "📦 Updating flake inputs..."
+    pushd $path
+
+    nix flake update
+
+    if test $status -ne 0
+        echo "❌ Flake update failed!"
+        popd
+        return 1
+    end
+
+    echo "🔍 Previewing changes (dry run)..."
+    nh os switch . -H $host --dry
+
+    popd
+
+    echo ""
+    echo "💡 To apply these changes, run: nup $path $host"
 end
 
 function nsh --description 'ephemeral nix shell: nsh <pkg>'
@@ -171,6 +195,8 @@ function ngc --description "Delete system generations older than specified age a
     end
 
     set -l age $argv[1]
+    set -l path (test -n "$argv[2]"; and echo "$argv[2]"; or echo "/etc/nixos")
+    set -l host (test -n "$argv[3]"; and echo "$argv[3]"; or echo (hostname))
 
     # Validate age format
     if not string match -r '^\d+[dhw]|^\d{4}-\d{2}-\d{2}$' $age
@@ -180,6 +206,12 @@ function ngc --description "Delete system generations older than specified age a
     end
 
     echo "🗑️  Cleaning up generations older than $age..."
+
+    # Use nh's built-in cleanup if available
+    if type -q nh
+        echo "🧹 Using nh clean..."
+        nh clean --keep-since $age
+    end
 
     # ── Nix profile cleanup ────────────────────────────────────────────
 
@@ -228,20 +260,15 @@ function ngc --description "Delete system generations older than specified age a
 
         echo "✅ Removed $removed_count boot entries"
 
-        # Regenerate bootloader configuration
+        # Regenerate bootloader configuration using nh
         echo "🔄 Regenerating bootloader configuration..."
-        set -l path (test -n "$argv[2]"; and echo "$argv[2]"; or echo "/etc/nixos")
-        set -l host (test -n "$argv[3]"; and echo "$argv[3]"; or echo (hostname))
-
-        sudo nixos-rebuild boot --flake $path#$host > /dev/null 2>&1
+        nh os boot $path -H $host > /dev/null 2>&1
 
         echo "✅ Bootloader configuration regenerated"
 
     else if test -f /boot/grub/grub.cfg
         echo "🔧 Detected GRUB bootloader"
-        set -l path (test -n "$argv[2]"; and echo "$argv[2]"; or echo "/etc/nixos")
-        set -l host (test -n "$argv[3]"; and echo "$argv[3]"; or echo (hostname))
-        sudo nixos-rebuild boot --flake $path#$host > /dev/null 2>&1
+        nh os boot $path -H $host > /dev/null 2>&1
         echo "✅ GRUB configuration regenerated"
     else
         echo "⚠️  Could not detect bootloader type, skipping bootloader cleanup"

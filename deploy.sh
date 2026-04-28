@@ -4,6 +4,7 @@ set -euo pipefail
 # Colours
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 DEST="/etc/nixos"
@@ -26,8 +27,10 @@ TARGETS=(
     devshells/rust.nix
 )
 
-echo "Deploying NixOS config: $SRC → $DEST"
-echo
+echo "🚀 Deploying NixOS configuration..."
+echo "📁 Source: $SRC"
+echo "📁 Destination: $DEST"
+echo ""
 
 for target in "${TARGETS[@]}"; do
     src_file="$SRC/$target"
@@ -35,13 +38,13 @@ for target in "${TARGETS[@]}"; do
 
     # Skip if source doesn't exist
     if [[ ! -f "$src_file" ]]; then
-        echo -e "  ${YELLOW}skip${NC}   $target (not found)"
+        echo -e "  ⚠️  ${YELLOW}skip${NC}   $target (not found)"
         continue
     fi
 
     # If it's a nixsec file or flake.lock and it already exists at the destination, skip it
     if [[ "$target" == nixsec/* ]] || [[ "$target" == flake.lock ]] && [[ -f "$dst_file" ]]; then
-        echo -e "  ${YELLOW}skip${NC}   $target (files exists)"
+        echo -e "  ⏭️  ${YELLOW}skip${NC}   $target (already exists)"
         continue
     fi
 
@@ -49,16 +52,18 @@ for target in "${TARGETS[@]}"; do
     dst_dir="$(dirname "$dst_file")"
     if [[ ! -d "$dst_dir" ]]; then
         sudo mkdir -p "$dst_dir"
+        echo -e "  📁 ${GREEN}created${NC} $dst_dir"
     fi
 
     # Only copy if different
     if sudo diff -q "$src_file" "$dst_file" &>/dev/null; then
-        echo -e "  ok     $target"
+        echo -e "  ✓  ${GREEN}ok${NC}      $target"
     else
         sudo cp "$src_file" "$dst_file"
-        echo -e "  ${GREEN}copied${NC} $target"
+        echo -e "  📋 ${GREEN}copied${NC}   $target"
     fi
 done
 
-echo
-echo "Done. Run 'nrs' to rebuild (includes Home Manager activation)."
+echo ""
+echo "✅ Deployment complete!"
+echo "💡 Run 'nrs' to rebuild system (includes Home Manager activation)"
