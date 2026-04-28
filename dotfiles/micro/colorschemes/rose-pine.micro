@@ -1,5 +1,5 @@
 # Rosé Pine for Micro
-color-link default "#e0def4,#191724"
+color-link default "#e0def4"
 color-link comment "#6e6a86"
 color-link identifier "#9ccfd8"
 color-link constant "#ebbcba"

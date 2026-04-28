@@ -5,6 +5,15 @@
   hardware.graphics = {
     enable      = true;
     enable32Bit = true;
+    extraPackages = with pkgs; [
+      libva-vdpau-driver
+      libvdpau-va-gl
+    ];
+  };
+
+  # VA-API for hardware video acceleration
+  environment.variables = {
+    LIBVA_DRIVER_NAME = "radeonsi";  # or "amdgpu"
   };
 
   # Unlock all power-play features (fan curves, overclocking headroom, etc.)

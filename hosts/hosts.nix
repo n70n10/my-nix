@@ -1,4 +1,4 @@
-{ config, pkgs, lib, secrets, hostname, ... }:
+{ config, pkgs, lib, secrets, inputs, ... }:
 
 {
   # ── zswap ─────────────────────────────────────────────────────────────────
@@ -8,14 +8,21 @@
     maxPoolPercent = 20;
   };
   swapDevices = [ {
-    device = "/var/lib/swapfile";
-    size   = 16 * 1024; # 16GB
+    device = "/swapfile";
+    size   = 16384; # 16GB (in MB)
   } ];
+
+  # Faster boot by reducing initrd size
+  boot.initrd = {
+    systemd.enable = true;
+    supportedFilesystems = [ "btrfs" "ext4" "vfat" ];
+  };
+  boot.tmp.cleanOnBoot = true;
 
   # ── Plymouth boot splash ──────────────────────────────────────────────────
   boot.plymouth = {
     enable = true;
-    theme  = "bgrt";   # default KDE theme — change to any installed theme
+    theme  = "bgrt";
   };
 
   # Silent boot — suppress kernel/systemd noise during splash
@@ -38,7 +45,7 @@
 
   # ── Networking ───────────────────────────────────────────────────────────────
   networking = {
-    hostName              = hostname;
+    hostName              = secrets.hostname;
     networkmanager.enable = true;
   };
 
@@ -87,7 +94,14 @@
   services.desktopManager.plasma6.enable = true;
 
   # Plasma Login Manager
+  services.displayManager.sddm.enable = true;
   services.displayManager.plasma-login-manager.enable = true;
+
+  # Optional: auto-login (uncomment if desired)
+  # services.displayManager.autoLogin = {
+  #   enable = true;
+  #   user = secrets.username;
+  # };
 
   # ── Sound: PipeWire ──────────────────────────────────────────────────────────
   services.pulseaudio.enable = false;
@@ -100,24 +114,55 @@
     jack.enable       = true;
   };
 
-  # Workaround for https://github.com/NixOS/nixpkgs/issues/432137
-  # Qt can't find pipewire-0.3 at runtime — expose it via LD_LIBRARY_PATH
-  environment.variables.LD_LIBRARY_PATH =
-    lib.mkForce "${pkgs.pipewire}/lib:${pkgs.pipewire.jack}/lib";
+  # ── Printing (AirPrint support) ──────────────────────────────────────────────
+  # AirPrint works with cups + avahi. No driver needed for most modern printers.
+  services.printing = {
+    enable = true;
+    # Avahi is required for AirPrint discovery
+    browsing = true;  # Enable printer sharing/browsing
+  };
 
-  # ── Flatpak ───────────────────────────────────────────────────────────────
+  # Avahi for Zeroconf/Bonjour/AirPrint discovery
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;  # For .local hostname resolution
+    publish = {
+      enable = true;
+      addresses = true;
+      workstation = true;
+    };
+  };
+
+  # ── Bluetooth ────────────────────────────────────────────────────────────────
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+    settings = {
+      General = {
+        Enable = "Source,Sink,Media,Socket";
+      };
+    };
+  };
+  services.blueman.enable = true;
+
+  # ── Flatpak ──────────────────────────────────────────────────────────────────
   services.flatpak.enable = true;
   # Add Flathub after install: flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-  # ── Applications ──────────────────────────────────────────────────────────
+  # ── Applications ──────────────────────────────────────────────────────────────
   programs.firefox.enable = true;
+
+  programs.gamescope = {
+    enable = true;
+    capSysNice = true;  # Allows Gamescope to set real-time priority for better performance
+  };
 
   programs.steam = {
     enable                         = true;
     remotePlay.openFirewall        = true;
     dedicatedServer.openFirewall   = true;
-    # Pass gamemode into Steam's runtime
     extraCompatPackages            = [ pkgs.proton-ge-bin ];
+    gamescopeSession.enable = true;
   };
 
   programs.gamemode.enable = true;
@@ -138,12 +183,11 @@
       experimental-features = [ "nix-command" "flakes" ];
       auto-optimise-store   = true;
       trusted-users         = [ "root" secrets.username ];
+      max-jobs              = "auto";
+      cores                 = 0;
+      log-lines             = 50;
     };
-    # gc = {                                   # Removing because it conflicts with nh clean
-    #   automatic = true;
-    #   dates     = "weekly";
-    #   options   = "--delete-older-than 14d";
-    # };
+    # gc is disabled because nh.clean handles it
   };
 
   nixpkgs.config.allowUnfree = true;
@@ -164,10 +208,7 @@
     wl-clipboard
 
     # Gaming
-    # lutris                     # this is pulling openldap with fails to build miserably
-    # heroic                     # install lutris and heroic as flatpaks
     mangohud
-    gamemode
   ];
 
   # direnv / nix-direnv for devshells
@@ -184,6 +225,38 @@
     noto-fonts
     noto-fonts-color-emoji
   ];
+
+  # ── Essential desktop services ───────────────────────────────────────────────
+  services = {
+    udisks2.enable = true;   # Removable media management for KDE
+    upower.enable = true;    # Power management
+    fstrim.enable = true;    # SSD TRIM support
+  };
+
+  # ── Hardware firmware ────────────────────────────────────────────────────────
+  hardware.enableRedistributableFirmware = true;
+
+  # ── Security hardening ───────────────────────────────────────────────────────
+  security = {
+    polkit.enable = true;
+    protectKernelImage = true;
+    allowSimultaneousMultithreading = true;
+
+    sudo = {
+      enable = true;
+      # wheelNeedsPassword = false;  # Passwordless sudo for wheel (optional)
+    };
+  };
+
+  # ── Virtualization (optional) ────────────────────────────────────────────────
+  # Uncomment if you need containers/VMs
+  # virtualisation = {
+  #   podman = {
+  #     enable = true;
+  #     dockerCompat = true;
+  #   };
+  #   libvirtd.enable = true;
+  # };
 
   system.stateVersion = "25.11";
 }

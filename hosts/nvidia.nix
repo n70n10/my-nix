@@ -1,24 +1,35 @@
 { config, pkgs, lib, ... }:
 
 {
-  # imports = [ ./hardware-configuration.nix ];
-
   # ── NVIDIA GPU ───────────────────────────────────────────────────────────────
   services.xserver.videoDrivers = [ "nvidia" ];
 
   hardware.nvidia = {
-    # Alternatives:
-    #   config.boot.kernelPackages.nvidiaPackages.beta
-    #   config.boot.kernelPackages.nvidiaPackages.open  (open kernel module, Turing+)
-    package            = config.boot.kernelPackages.nvidiaPackages.open;
+    # Use open kernel module for Turing+ GPUs (RTX 2000 series and newer)
+    open = true;
+
     modesetting.enable = true;
-    open               = true;        # set true for Turing+ if you prefer the open module
-    nvidiaSettings     = true;
-    powerManagement.enable = true;    # enable on laptops
+    nvidiaSettings = true;
+    powerManagement.enable = true;  # Enable on laptops
+
+    # Optional: Force prime sync for hybrid graphics (laptops with Intel/AMD iGPU)
+    # prime = {
+    #   sync.enable = true;
+    #   offload.enable = true;
+    #   intelBusId = "PCI:0:2:0";
+    #   nvidiaBusId = "PCI:1:0:0";
+    # };
   };
 
+  # Kernel modules for NVIDIA
+  boot.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
+  boot.kernelParams = [
+    "nvidia-drm.modeset=1"
+    "nvidia-drm.fbdev=1"
+  ];
+
   hardware.graphics = {
-    enable      = true;
+    enable = true;
     enable32Bit = true;
     extraPackages = with pkgs; [ nvidia-vaapi-driver ];
   };
@@ -27,13 +38,8 @@
   environment.variables = {
     GBM_BACKEND               = "nvidia-drm";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
-    LIBVA_DRIVER_NAME         = "nvidia";   # VA-API via nvidia-vaapi-driver
+    LIBVA_DRIVER_NAME         = "nvidia";
   };
-
-  boot.kernelParams = [
-    "nvidia-drm.modeset=1"
-    "nvidia-drm.fbdev=1"   # required by some Wayland compositors
-  ];
 
   # ── CPU microcode ─────────────────────────────────────────────────────────────
   # Switch to hardware.cpu.amd.updateMicrocode if your NVIDIA box has an AMD CPU

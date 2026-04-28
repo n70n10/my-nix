@@ -1,8 +1,27 @@
 { pkgs, config, lib, secrets, ... }:
 
 let
-  symlinks = import ./linkfactory.nix { inherit config lib; };
-  hd = config.home.homeDirectory;
+  homeDirectory = config.home.homeDirectory;
+
+  symlinks = import ./linkfactory.nix {
+    inherit config lib homeDirectory;
+    dotfilesDir = "${homeDirectory}/my-nix/dotfiles";
+  };
+
+  linkPairs = [
+    { source = "fish/conf.d/main.fish";         target = ".config/fish/conf.d/main.fish"; }
+    { source = "fish/conf.d/functions.fish";    target = ".config/fish/conf.d/functions.fish"; }
+
+    { source = "micro/settings.json";           target = ".config/micro/settings.json"; }
+    { source = "micro/bindings.json";           target = ".config/micro/bindings.json"; }
+    { source = "micro/colorschemes/rose-pine.micro"; target = ".config/micro/colorschemes/rose-pine.micro"; }
+
+    { source = "nvim";                          target = ".config/nvim"; }
+
+    { source = "ghostty";                       target = ".config/ghostty"; }
+  ];
+
+  symlinksDAG = symlinks linkPairs;
 in
 {
   imports = [
@@ -45,31 +64,16 @@ in
       fastfetch tokei hyperfine nvd
     ];
 
-    activation = symlinks [
-      { source = "${hd}/my-nix/dotfiles/fish/conf.d/main.fish";
-        target = "${hd}/.config/fish/conf.d/main.fish"; }
-      { source = "${hd}/my-nix/dotfiles/fish/conf.d/functions.fish";
-        target = "${hd}/.config/fish/conf.d/functions.fish"; }
-
-      { source = "${hd}/my-nix/dotfiles/micro/settings.json";
-        target = "${hd}/.config/micro/settings.json"; }
-      { source = "${hd}/my-nix/dotfiles/micro/bindings.json";
-        target = "${hd}/.config/micro/bindings.json"; }
-      { source = "${hd}/my-nix/dotfiles/micro/colorschemes/rose-pine.micro";
-        target = "${hd}/.config/micro/colorschemes/rose-pine.micro"; }
-
-      { source = "${hd}/my-nix/dotfiles/nvim"; target = "${hd}/.config/nvim"; }
-
-      { source = "${hd}/my-nix/dotfiles/ghostty"; target = "${hd}/.config/ghostty"; }
-
-];
-
     sessionPath = [ "$HOME/.local/bin" ];
   };
 
-  services.home-manager.autoExpire = {
-    enable = true;
-    store.cleanup = true; # Runs nix-collect-garbage automatically
+  # ── Home activation (symlinks DAG + cleanup) ──────────────────────────────
+  home.activation = symlinksDAG // {
+    cleanHomeManager = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      echo "🧹 Cleaning old Home Manager generations..."
+      nix profile wipe-history --profile ~/.local/state/nix/profiles/home-manager --older-than 30d 2>/dev/null || true
+      nix-collect-garbage --delete-older-than 30d 2>/dev/null || true
+    '';
   };
 
   programs.home-manager.enable = true;

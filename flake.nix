@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
-      url   = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -19,13 +19,13 @@
 
       mkHost = { system }: nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = sharedArgs // { hostname = secrets.hostname; };
+        specialArgs = { inherit inputs secrets; };
         modules = [
           ./nixsec/hardware-configuration.nix
           ./hosts/hosts.nix
           ./hosts/${secrets.gpu}.nix
           inputs.home-manager.nixosModules.home-manager {
-            home-manager.useGlobalPkgs   = true;
+            home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.users.${secrets.username} = import ./home/home.nix;
             home-manager.extraSpecialArgs = sharedArgs;
@@ -36,15 +36,16 @@
     {
       nixosConfigurations = {
         "${secrets.hostname}" = mkHost { system = "x86_64-linux"; };
-        default               = mkHost { system = "x86_64-linux"; };
+        # Make 'default' an alias for clarity
+        default = self.nixosConfigurations."${secrets.hostname}";
       };
 
       devShells.x86_64-linux =
         let pkgs = nixpkgs.legacyPackages.x86_64-linux;
         in {
-          go      = import ./devshells/go.nix   { inherit pkgs; };
-          rust    = import ./devshells/rust.nix  { inherit pkgs; };
-          default = import ./devshells/go.nix   { inherit pkgs; };
+          go = import ./devshells/go.nix { inherit pkgs; };
+          rust = import ./devshells/rust.nix { inherit pkgs; };
+          default = import ./devshells/go.nix { inherit pkgs; };
         };
     };
 }

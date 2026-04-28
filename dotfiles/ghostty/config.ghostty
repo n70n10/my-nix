@@ -4,4 +4,6 @@ font-size = 13
 window-height = 32
 window-width = 130
 
+background-opacity = 0.9
+
 theme = Rose Pine
