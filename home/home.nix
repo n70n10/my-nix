@@ -9,16 +9,13 @@ let
   };
 
   linkPairs = [
-    { source = "fish/conf.d/main.fish";         target = ".config/fish/conf.d/main.fish"; }
-    { source = "fish/conf.d/functions.fish";    target = ".config/fish/conf.d/functions.fish"; }
+    { source = "fish/conf.d/main.fish";      target = ".config/fish/conf.d/main.fish"; }
+    { source = "fish/conf.d/functions.fish"; target = ".config/fish/conf.d/functions.fish"; }
 
-    { source = "micro/settings.json";           target = ".config/micro/settings.json"; }
-    { source = "micro/bindings.json";           target = ".config/micro/bindings.json"; }
-    { source = "micro/colorschemes/rose-pine.micro"; target = ".config/micro/colorschemes/rose-pine.micro"; }
-
-    { source = "nvim";                          target = ".config/nvim"; }
-
-    { source = "ghostty";                       target = ".config/ghostty"; }
+    { source = "emacs/init.el";              target = ".config/emacs/init.el"; }
+    { source = "emacs/themes";               target = ".config/emacs/themes"; }
+    
+    { source = "ghostty";                    target = ".config/ghostty"; }
   ];
 
   symlinksDAG = symlinks linkPairs;
@@ -52,16 +49,16 @@ in
 
     packages = with pkgs; [
       # Editors
-      micro neovim
+      emacs-pgtk
 
       # CLI tools
       bat eza fzf ripgrep fd btop duf
 
       # Dev tools
-      gh lazygit delta
+      gh lazygit delta jq nil nixfmt
 
       # Utilities
-      fastfetch tokei hyperfine nvd
+      fastfetch tokei hyperfine nvd unzip
     ];
 
     sessionPath = [ "$HOME/.local/bin" ];

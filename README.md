@@ -194,7 +194,7 @@ use flake /etc/nixos#go
 **NixOS helpers**
 | Function | Does |
 | --- | --- |
-| `nrs [path] [host]` | `nh os switch` — defaults to `/etc/nixos` and current hostname. Shows diff preview before applying. |
+| `nrs [path] [host]` | `nh os switch` — defaults to `/etc/nixos` and current hostname |
 | `nrt [path] [host]` | `nh os test` — test a configuration without making it permanent |
 | `nrb [path] [host]` | `nh os boot` — build configuration for next boot |
 | `nup [path] [host]` | `nix flake update` + `nh os switch` — updates inputs and rebuilds in one step |
@@ -221,6 +221,17 @@ use flake /etc/nixos#go
 | Function | Does |
 | --- | --- |
 | `gsquash <N> [msg]` | squash last N commits into a single commit; uses combined messages or custom message if provided |
+
+**Emacs**
+| Function | Does |
+| --- | --- |
+| `ew [path]` | run Emacs in GUI mode (detached) |
+| `et [path]` | run Emacs in terminal mode |
+
+**Fonts**
+| Function | Does |
+| --- | --- |
+| `install-iosevka` | install/update Iosevka SS12 and Aile fonts from GitHub. Checks latest version, downloads, and installs to `~/.local/share/fonts` |
 
 **Misc**
 | Function | Does |

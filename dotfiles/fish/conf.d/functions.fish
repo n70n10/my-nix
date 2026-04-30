@@ -148,7 +148,7 @@ function nup-preview --description 'update flake and preview changes without app
     echo "📦 Updating flake inputs..."
     pushd $path
 
-    nix flake update
+    sudo nix flake update
 
     if test $status -ne 0
         echo "❌ Flake update failed!"
@@ -455,6 +455,137 @@ function gsquash --description 'squash last N commits'
         echo "✅ Squash successful!"
     else
         echo "❌ Squash failed!"
+    end
+end
+
+# ── Emacs ─────────────────────────────────────────────────────────────────────
+
+function ew --description 'run emacs in gui mode (detached)'
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo ".")
+    emacs $path &; disown
+end
+
+function et --description 'run emacs in terminal mode'
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo ".")
+    emacs $path
+end
+
+# ── Fonts ─────────────────────────────────────────────────────────────────────
+
+function install-iosevka --description 'install/update Iosevka SS12 and Aile fonts'
+    set -l font_dir "$HOME/.local/share/fonts"
+    set -l fonts_to_install "IosevkaSS12" "IosevkaAile"
+    
+    # Fetch latest version from GitHub
+    echo "🔍 Checking for latest version..."
+    set -l latest_version (curl -s https://api.github.com/repos/be5invis/Iosevka/releases/latest | jq -r '.tag_name' | string trim -c 'v')
+    
+    if test -z "$latest_version"
+        echo "❌ Failed to fetch latest version"
+        return 1
+    end
+    
+    echo "🆕 Latest version: $latest_version"
+    echo ""
+    
+    # Create font directory if it doesn't exist
+    if not test -d "$font_dir"
+        echo "📁 Creating font directory: $font_dir"
+        mkdir -p "$font_dir"
+    end
+    
+    set -l any_installed false
+    set -l any_failed false
+    
+    # Install each font
+    for font_name in $fonts_to_install
+        set -l install_dir "$font_dir/$font_name"
+        set -l version_file "$install_dir/.version"
+        
+        # Get current version if installed
+        set -l current_version ""
+        if test -f "$version_file"
+            set current_version (cat "$version_file")
+            echo "📦 $font_name: currently v$current_version"
+        else
+            echo "📦 $font_name: not installed"
+        end
+        
+        # Check if update is needed
+        if test "$current_version" = "$latest_version" -a -d "$install_dir"
+            echo "✅ $font_name: already up to date (v$latest_version)"
+            echo ""
+            continue
+        end
+        
+        # Create install directory
+        if not test -d "$install_dir"
+            mkdir -p "$install_dir"
+        end
+        
+        # Download the zip file
+        set -l zip_url "https://github.com/be5invis/Iosevka/releases/download/v$latest_version/PkgTTC-$font_name-$latest_version.zip"
+        set -l temp_zip (mktemp)
+        
+        echo "📥 Downloading $font_name v$latest_version..."
+        curl -L --progress-bar -o "$temp_zip" "$zip_url"
+        
+        if test $status -ne 0
+            echo "❌ Failed to download $font_name"
+            rm -f "$temp_zip"
+            set any_failed true
+            echo ""
+            continue
+        end
+        
+        # Remove old font files
+        if test -d "$install_dir"
+            find "$install_dir" -maxdepth 1 -type f \( -name "*.ttc" -o -name "*.ttf" \) -delete 2>/dev/null
+        end
+        
+        # Extract the zip
+        echo "📦 Extracting $font_name..."
+        unzip -q -o "$temp_zip" -d "$install_dir"
+        
+        if test $status -ne 0
+            echo "❌ Failed to extract $font_name"
+            rm -f "$temp_zip"
+            set any_failed true
+            echo ""
+            continue
+        end
+        
+        # Cleanup
+        rm -f "$temp_zip"
+        
+        # Save version info
+        echo "$latest_version" > "$version_file"
+        
+        echo "✅ $font_name v$latest_version installed"
+        echo ""
+        set any_installed true
+    end
+    
+    # Refresh font cache if anything changed
+    if test "$any_installed" = "true" -o "$any_failed" = "false"
+        echo "🔄 Refreshing font cache..."
+        if type -q fc-cache
+            fc-cache -fv "$font_dir" > /dev/null 2>&1
+            echo "✅ Font cache refreshed"
+        else
+            echo "⚠️  fc-cache not found. Fonts may not be available until reboot or login"
+        end
+    end
+    
+    echo ""
+    if test "$any_failed" = "true"
+        echo "⚠️  Some fonts failed to install. Check the errors above."
+        return 1
+    else
+        echo "✅ All Iosevka fonts are up to date!"
+        echo ""
+        echo "🔍 To verify installation, run: fc-list | grep -i iosevka"
+        return 0
     end
 end
 
