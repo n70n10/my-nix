@@ -19,7 +19,7 @@
 
       mkHost = { system }: nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit inputs secrets; };
+        specialArgs = sharedArgs;
         modules = [
           ./nixsec/hardware-configuration.nix
           ./hosts/hosts.nix

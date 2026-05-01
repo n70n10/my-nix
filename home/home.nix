@@ -52,7 +52,7 @@ in
       emacs-pgtk
 
       # CLI tools
-      bat eza fzf ripgrep fd btop duf
+      bat eza fzf ripgrep fd btop duf gdu tlrc
 
       # Dev tools
       gh lazygit delta jq nil nixfmt
@@ -62,15 +62,6 @@ in
     ];
 
     sessionPath = [ "$HOME/.local/bin" ];
-  };
-
-  # ── Home activation (symlinks DAG + cleanup) ──────────────────────────────
-  home.activation = symlinksDAG // {
-    cleanHomeManager = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      echo "🧹 Cleaning old Home Manager generations..."
-      nix profile wipe-history --profile ~/.local/state/nix/profiles/home-manager --older-than 30d 2>/dev/null || true
-      nix-collect-garbage --delete-older-than 30d 2>/dev/null || true
-    '';
   };
 
   programs.home-manager.enable = true;

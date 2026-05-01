@@ -43,7 +43,7 @@ for target in "${TARGETS[@]}"; do
     fi
 
     # If it's a nixsec file or flake.lock and it already exists at the destination, skip it
-    if [[ "$target" == nixsec/* ]] || [[ "$target" == flake.lock ]] && [[ -f "$dst_file" ]]; then
+    if ([[ "$target" == nixsec/* ]] || [[ "$target" == flake.lock ]]) && [[ -f "$dst_file" ]]; then
         echo -e "  ⏭️  ${YELLOW}skip${NC}   $target (already exists)"
         continue
     fi

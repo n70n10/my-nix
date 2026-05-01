@@ -94,8 +94,7 @@
   services.desktopManager.plasma6.enable = true;
 
   # Plasma Login Manager
-  services.displayManager.sddm.enable = true;
-  services.displayManager.plasma-login-manager.enable = true;
+    services.displayManager.plasma-login-manager.enable = true;
 
   # Optional: auto-login (uncomment if desired)
   # services.displayManager.autoLogin = {
@@ -116,8 +115,10 @@
   
   # Workaround for https://github.com/NixOS/nixpkgs/issues/432137
   # Qt can't find pipewire-0.3 at runtime — expose it via LD_LIBRARY_PATH
-  environment.sessionVariables.LD_LIBRARY_PATH = lib.mkForce 
-    "${pkgs.pipewire}/lib:${pkgs.libpulseaudio}/lib";
+  environment.sessionVariables.LD_LIBRARY_PATH = lib.mkAfter [
+    "${pkgs.pipewire}/lib"
+    "${pkgs.libpulseaudio}/lib"
+  ];
 
   # ── Printing (AirPrint support) ──────────────────────────────────────────────
   # AirPrint works with cups + avahi. No driver needed for most modern printers.

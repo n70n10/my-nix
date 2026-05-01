@@ -53,7 +53,7 @@ function nrb --description 'nh os boot'
     end
 end
 
-function nup --description 'flake update + nh rebuild switch'
+function nup --description 'nh os switch --update'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
@@ -62,26 +62,41 @@ function nup --description 'flake update + nh rebuild switch'
         return 1
     end
 
-    echo "📦 Updating flake inputs..."
-    pushd $path
+    echo "📦 Updating flake inputs and rebuilding system..."
+    echo "📁 Path: $path"
+    echo "🖥️  Host: $host"
 
-    nix flake update
-
-    if test $status -ne 0
-        echo "❌ Flake update failed!"
-        popd
-        return 1
-    end
-
-    echo "🔄 Rebuilding system with updated inputs..."
-    nh os switch . -H $host $argv[3..]
-
-    popd
+    nh os switch $path -H $host --update $argv[3..]
 
     if test $status -eq 0
         echo "✅ System updated and switched successfully!"
     else
         echo "❌ System rebuild failed!"
+    end
+end
+
+function nup-preview --description 'preview flake update changes without applying'
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
+
+    if not test -d "$path"
+        echo "❌ Error: Directory '$path' does not exist"
+        return 1
+    end
+
+    echo "📦 Updating flake inputs and previewing changes (dry run)..."
+    echo "📁 Path: $path"
+    echo "🖥️  Host: $host"
+    echo "💡 This is a dry run - no changes will be applied"
+
+    nh os switch $path -H $host --update --dry $argv[3..]
+
+    if test $status -eq 0
+        echo ""
+        echo "✅ Preview complete!"
+        echo "💡 To apply these changes, run: nup $path $host"
+    else
+        echo "❌ Preview failed!"
     end
 end
 
@@ -136,45 +151,24 @@ function ncheck --description 'preview changes before applying (nh dry)'
     nh os switch $path -H $host --dry
 end
 
-function nup-preview --description 'update flake and preview changes without applying'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
-    set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
-
-    if not test -d "$path"
-        echo "❌ Error: Directory '$path' does not exist"
-        return 1
-    end
-
-    echo "📦 Updating flake inputs..."
-    pushd $path
-
-    sudo nix flake update
-
-    if test $status -ne 0
-        echo "❌ Flake update failed!"
-        popd
-        return 1
-    end
-
-    echo "🔍 Previewing changes (dry run)..."
-    nh os switch . -H $host --dry
-
-    popd
-
-    echo ""
-    echo "💡 To apply these changes, run: nup $path $host"
-end
-
-function nsh --description 'ephemeral nix shell: nsh <pkg>'
+function nsh --description 'ephemeral nix shell: nsh <pkg1> [pkg2...]'
     if test -z "$argv[1]"
         echo "❌ Usage: nsh <package> [additional packages...]"
-        echo "Example: nsh hello"
-        echo "Example: nsh python3 curl"
+        echo "📖 Examples:"
+        echo "   nsh hello"
+        echo "   nsh python3 curl git"
+        echo "   nsh nodejs yarn"
         return 1
+    end
+
+    # Build package list with nixpkgs# prefix
+    set -l packages
+    for pkg in $argv
+        set -a packages "nixpkgs#$pkg"
     end
 
     echo "📦 Entering ephemeral shell with: $argv"
-    nix shell nixpkgs#$argv[1] $argv[2..]
+    nix shell $packages
 end
 
 function dev --description 'nix develop [.#name]'
@@ -187,7 +181,7 @@ function dev --description 'nix develop [.#name]'
     end
 end
 
-function ngc --description "Delete system generations older than specified age and clean bootloader"
+function ngc --description "Delete system generations older than specified age using nh"
     if test -z "$argv[1]"
         echo "❌ Usage: ngc <age>"
         echo "📖 Examples: ngc 7d, ngc 30d, ngc 2w"
@@ -206,96 +200,58 @@ function ngc --description "Delete system generations older than specified age a
     end
 
     echo "🗑️  Cleaning up generations older than $age..."
-
-    # Use nh's built-in cleanup if available
-    if type -q nh
-        echo "🧹 Using nh clean..."
-        nh clean --keep-since $age
+    
+    # Let nh handle everything it knows about
+    if not type -q nh
+        echo "❌ Error: 'nh' command not found"
+        return 1
+    end
+    
+    nh clean --keep-since $age
+    
+    if test $status -ne 0
+        echo "❌ nh clean failed!"
+        return 1
     end
 
-    # ── Nix profile cleanup ────────────────────────────────────────────
-
-    echo "📁 Wiping system profile history..."
-    sudo nix profile wipe-history --profile /nix/var/nix/profiles/system --older-than $age
-
-    # Home-manager cleanup
-    if test -d ~/.local/state/nix/profiles/home-manager
-        echo "🏠 Wiping home-manager profile history..."
-        nix profile wipe-history --profile ~/.local/state/nix/profiles/home-manager --older-than $age
-    end
-
-    echo "👤 Wiping user profile history..."
-    nix profile wipe-history --older-than $age
-
-    # ── Bootloader cleanup ─────────────────────────────────────────────
-
-    echo "🖥️  Cleaning bootloader entries..."
-
-    # Detect which bootloader is being used
+    # ── Bootloader cleanup (what nh might miss) ─────────────────────────────
+    # nh clean doesn't always clean bootloader entries thoroughly
+    
     if test -d /boot/loader/entries
-        echo "🔧 Detected systemd-boot"
-
-        # Get actual generation numbers from nix profile (skip header line)
-        set -l keep_gens (sudo nix-env --list-generations --profile /nix/var/nix/profiles/system | tail -n +2 | awk '{print $1}')
-
-        echo "📌 Keeping boot entries for generations: $keep_gens"
-
-        # Get boot entry files and extract generation numbers (unique)
-        set -l boot_files /boot/loader/entries/nixos-generation-*.conf
-        set -l removed_count 0
-
-        for file in $boot_files
-            if test -f "$file"
-                # Extract generation number from filename
-                set gen (echo $file | string replace -r '.*nixos-generation-([0-9]+)\.conf' '$1')
-
-                # Check if this generation should be kept
-                if not contains $gen $keep_gens
-                    echo "🗑️  Removing boot entry for generation $gen"
-                    sudo rm -f "$file"
-                    set removed_count (math $removed_count + 1)
-                end
-            end
-        end
-
-        echo "✅ Removed $removed_count boot entries"
-
-        # Regenerate bootloader configuration using nh
+        echo "🖥️  Cleaning systemd-boot entries..."
+        
+        # Get generations that should be kept according to nh's logic
+        # This is tricky; safer approach: let bootloader manage itself
+        # Most bootloaders (systemd-boot, GRUB) will clean up when their
+        # corresponding generations are removed from /nix/var/nix/profiles/
+        
+        # Just regenerate to ensure bootloader is in sync
         echo "🔄 Regenerating bootloader configuration..."
         nh os boot $path -H $host > /dev/null 2>&1
-
-        echo "✅ Bootloader configuration regenerated"
-
+        
+        echo "✅ Bootloader configuration synced"
+        
     else if test -f /boot/grub/grub.cfg
-        echo "🔧 Detected GRUB bootloader"
+        echo "🔄 Regenerating GRUB configuration..."
         nh os boot $path -H $host > /dev/null 2>&1
-        echo "✅ GRUB configuration regenerated"
-    else
-        echo "⚠️  Could not detect bootloader type, skipping bootloader cleanup"
+        echo "✅ GRUB configuration synced"
     end
-
-    # ── Garbage collection ────────────────────────────────────────────
-
-    echo "🧹 Running garbage collection as root..."
-    sudo nix-collect-garbage --delete-old
-
-    echo "🧹 Running garbage collection as user..."
-    nix-collect-garbage --delete-old
-
-    echo "✅ Done!"
 
     # Show summary
     echo ""
     echo "📊 Summary:"
-    echo "  • System profiles cleaned for age: $age"
-
+    echo "  • Cleaned generations older than: $age"
+    
     if test -d /boot/loader/entries
         set remaining (ls /boot/loader/entries/nixos-generation-*.conf 2>/dev/null | wc -l)
-        echo "  • Remaining boot entries: $remaining"
+        echo "  • Current boot entries: $remaining"
     end
 
     echo "  • Disk usage on /nix/store:"
     df -h /nix/store | tail -1 | awk '{print "    " $3 " used / " $4 " available (" $5 ")"}'
+    
+    echo ""
+    echo "✅ Done! nh clean handled profiles and GC automatically."
 end
 
 # ── Filesystem helpers ────────────────────────────────────────────────────────

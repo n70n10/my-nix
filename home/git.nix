@@ -26,8 +26,7 @@
 
       core = {
         autocrlf = "input";
-        editor   = "nvim";
-        pager    = "delta";
+        editor   = "nano";
       };
 
       pull.rebase  = true;
