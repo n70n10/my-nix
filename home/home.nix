@@ -2,10 +2,10 @@
 
 let
   homeDirectory = config.home.homeDirectory;
+  dotfilesDir   = "${homeDirectory}/nixfiles/dotfiles";
 
   symlinks = import ./linkfactory.nix {
-    inherit config lib homeDirectory;
-    dotfilesDir = "${homeDirectory}/my-nix/dotfiles";
+    inherit config lib homeDirectory dotfilesDir;
   };
 
   linkPairs = [
@@ -14,11 +14,11 @@ let
 
     { source = "emacs/init.el";              target = ".config/emacs/init.el"; }
     { source = "emacs/themes";               target = ".config/emacs/themes"; }
-    
+
     { source = "ghostty";                    target = ".config/ghostty"; }
   ];
 
-  symlinksDAG = symlinks linkPairs;
+  linkResult = symlinks linkPairs;
 in
 {
   imports = [
@@ -46,6 +46,8 @@ in
     username      = secrets.username;
     homeDirectory = "/home/${secrets.username}";
     stateVersion  = "25.11";
+
+    inherit (linkResult) activation file;
 
     packages = with pkgs; [
       # Editors

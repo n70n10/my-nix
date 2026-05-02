@@ -3,7 +3,7 @@
 # ── NixOS helpers ─────────────────────────────────────────────────────────
 
 function nrs --description 'nh os switch'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
     echo "🔄 Switching to new system configuration..."
@@ -20,7 +20,7 @@ function nrs --description 'nh os switch'
 end
 
 function nrt --description 'nh os test'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
     echo "🧪 Testing new system configuration..."
@@ -37,7 +37,7 @@ function nrt --description 'nh os test'
 end
 
 function nrb --description 'nh os boot'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
     echo "💾 Building system configuration for next boot..."
@@ -54,7 +54,7 @@ function nrb --description 'nh os boot'
 end
 
 function nup --description 'nh os switch --update'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
     if not test -d "$path"
@@ -76,7 +76,7 @@ function nup --description 'nh os switch --update'
 end
 
 function nup-preview --description 'preview flake update changes without applying'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
     if not test -d "$path"
@@ -101,7 +101,7 @@ function nup-preview --description 'preview flake update changes without applyin
 end
 
 function nfu --description 'nix flake update'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
 
     echo "📦 Updating flake inputs in: $path"
     nix flake update --flake $path $argv[2..]
@@ -114,7 +114,7 @@ function nfu --description 'nix flake update'
 end
 
 function nfc --description 'nix flake check'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
 
     echo "🔍 Checking flake integrity..."
     nix flake check $path $argv[2..]
@@ -144,7 +144,7 @@ function ngens --description 'nh os info (list generations)'
 end
 
 function ncheck --description 'preview changes before applying (nh dry)'
-    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo "~/nixos-config")
     set -l host (test -n "$argv[2]"; and echo "$argv[2]"; or echo (hostname))
 
     echo "🔍 Checking what will change..."
@@ -189,7 +189,7 @@ function ngc --description "Delete system generations older than specified age u
     end
 
     set -l age $argv[1]
-    set -l path (test -n "$argv[2]"; and echo "$argv[2]"; or echo "/etc/nixos")
+    set -l path (test -n "$argv[2]"; and echo "$argv[2]"; or echo "~/nixos-config")
     set -l host (test -n "$argv[3]"; and echo "$argv[3]"; or echo (hostname))
 
     # Validate age format
@@ -418,11 +418,14 @@ end
 
 function ew --description 'run emacs in gui mode (detached)'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo ".")
+    echo "✏️ Launching Emacs (GUI) in: $path"
     emacs $path &; disown
+    echo "✅ Emacs launched in background"
 end
 
 function et --description 'run emacs in terminal mode'
     set -l path (test -n "$argv[1]"; and echo "$argv[1]"; or echo ".")
+    echo "✏️ Launching Emacs (terminal) in: $path"
     emacs $path
 end
 

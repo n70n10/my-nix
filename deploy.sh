@@ -7,10 +7,10 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-DEST="/etc/nixos"
+DEST="$HOME/nixos-config"
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ── Nix config → /etc/nixos ──────────────────────────────────────────────────
+# ── Nix config → ~/nixos-config ──────────────────────────────────────────────────
 
 TARGETS=(
     flake.nix
@@ -51,15 +51,15 @@ for target in "${TARGETS[@]}"; do
     # Create destination directory if needed
     dst_dir="$(dirname "$dst_file")"
     if [[ ! -d "$dst_dir" ]]; then
-        sudo mkdir -p "$dst_dir"
+        mkdir -p "$dst_dir"
         echo -e "  📁 ${GREEN}created${NC} $dst_dir"
     fi
 
     # Only copy if different
-    if sudo diff -q "$src_file" "$dst_file" &>/dev/null; then
+    if diff -q "$src_file" "$dst_file" &>/dev/null; then
         echo -e "  ✓  ${GREEN}ok${NC}      $target"
     else
-        sudo cp "$src_file" "$dst_file"
+        cp "$src_file" "$dst_file"
         echo -e "  📋 ${GREEN}copied${NC}   $target"
     fi
 done

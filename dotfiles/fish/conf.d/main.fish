@@ -22,12 +22,6 @@ abbr -a top  'btop'
 abbr -a df   'duf'
 abbr -a du   'gdu'
 
-# editors
-abbr -a mi   'micro'
-abbr -a vi   'nvim'
-abbr -a vim  'nvim'
-abbr -a sv   'sudo nvim'
-
 # git
 abbr -a g    'git'
 abbr -a gs   'git status'

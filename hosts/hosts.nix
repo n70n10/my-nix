@@ -12,6 +12,9 @@
     size   = 16384; # 16GB (in MB)
   } ];
 
+  # Only the latest + greatest
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  
   # Faster boot by reducing initrd size
   boot.initrd = {
     systemd.enable = true;
@@ -175,7 +178,7 @@
 
   programs.nh = {
     enable = true;
-    flake = "/etc/nixos";
+    flake = "/home/${secrets.username}/nixos-config";
 
     clean = {
       enable = true;
@@ -226,8 +229,8 @@
   # ── Fonts ────────────────────────────────────────────────────────────────────
   fonts.packages = with pkgs; [
     adwaita-fonts
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.fira-code
+    # nerd-fonts.jetbrains-mono
+    # nerd-fonts.fira-code
     noto-fonts
     noto-fonts-color-emoji
   ];

@@ -1,16 +1,20 @@
-{ config, lib, homeDirectory, dotfilesDir ? "${homeDirectory}/my-nix/dotfiles", ... }:
+{ config, lib, homeDirectory, dotfilesDir, ... }:
 
 let
-  mkLink = { source, target }: let
-    # Generate a unique name for this symlink
-    name = builtins.replaceStrings ["/" "." " "] ["_" "_" "_"] target;
+  mkLinkCmd = { source, target }: let
     fullSource = "${dotfilesDir}/${source}";
     fullTarget = "${homeDirectory}/${target}";
-  in {
-    "symlink_${name}" = lib.hm.dag.entryAfter ["writeBoundary"] ''
-      mkdir -p "$(dirname "${fullTarget}")"
-      ln -sfn "${fullSource}" "${fullTarget}"
-    '';
-  };
+  in ''
+    mkdir -p "$(dirname "${fullTarget}")"
+    ln -sfn "${fullSource}" "${fullTarget}"
+  '';
 in
-  pairs: lib.mkMerge (map mkLink pairs)
+  pairs: {
+    activation.symlinkDotfiles = lib.hm.dag.entryAfter ["writeBoundary"] (
+      builtins.concatStringsSep "\n" (map mkLinkCmd pairs)
+    );
+
+    file.".config/.hm-refresh".text =
+      let sorted = builtins.sort (a: b: a.source < b.source) pairs;
+      in builtins.concatStringsSep "\n" (map (p: "${p.source} -> ${p.target}") sorted);
+  }

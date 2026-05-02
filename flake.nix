@@ -1,10 +1,14 @@
 {
-  description = "NixOS configuration";
+  description = "n10n70's awesome NixOS configuration";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    fenix = {
+      url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -36,16 +40,17 @@
     {
       nixosConfigurations = {
         "${secrets.hostname}" = mkHost { system = "x86_64-linux"; };
-        # Make 'default' an alias for clarity
         default = self.nixosConfigurations."${secrets.hostname}";
       };
 
       devShells.x86_64-linux =
-        let pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        let
+          pkgs      = nixpkgs.legacyPackages.x86_64-linux;
+          fenixPkgs = inputs.fenix.packages.x86_64-linux;
         in {
-          go = import ./devshells/go.nix { inherit pkgs; };
-          rust = import ./devshells/rust.nix { inherit pkgs; };
-          default = import ./devshells/go.nix { inherit pkgs; };
+          go      = import ./devshells/go.nix   { inherit pkgs; };
+          rust    = import ./devshells/rust.nix { inherit pkgs fenixPkgs; };
+          default = import ./devshells/go.nix   { inherit pkgs; };
         };
     };
 }

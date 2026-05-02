@@ -33,30 +33,34 @@
 
 (setq-default
  ;; Editing
- indent-tabs-mode        nil
- tab-width               4
- fill-column             80
+ indent-tabs-mode          nil
+ tab-width                 4
+ fill-column               80
  sentence-end-double-space nil
  ;; Scrolling
- scroll-margin           4
- scroll-conservatively   101
- hscroll-margin          4
- hscroll-step            1
- ;; Files
- backup-directory-alist  `(("." . ,(expand-file-name "backups" user-emacs-directory)))
- auto-save-file-name-transforms `((".*" ,(expand-file-name "auto-saves/" user-emacs-directory) t))
- create-lockfiles        nil)
+ scroll-margin             4
+ scroll-conservatively     101
+ hscroll-margin            4
+ hscroll-step              1)
 
+;; FIX: backup-directory-alist and auto-save-file-name-transforms are not
+;; buffer-local — they must be set with setq, not setq-default.
 (setq
- ;; Encoding
- coding-system-for-read  'utf-8
- coding-system-for-write 'utf-8
+ backup-directory-alist         `(("." . ,(expand-file-name "backups" user-emacs-directory)))
+ auto-save-file-name-transforms `((".*" ,(expand-file-name "auto-saves/" user-emacs-directory) t))
+ create-lockfiles               nil
  ;; Misc
- ring-bell-function      'ignore
- require-final-newline   t
- uniquify-buffer-name-style 'forward
+ ring-bell-function             'ignore
+ require-final-newline          t
+ uniquify-buffer-name-style     'forward
  ;; Electric
  electric-pair-preserve-balance t)
+
+;; FIX: coding-system-for-read/write are dynamic variables intended for
+;; temporary use around I/O calls, not permanent global settings.
+;; Use prefer-coding-system / set-default-coding-systems instead.
+(prefer-coding-system       'utf-8)
+(set-default-coding-systems 'utf-8)
 
 (global-auto-revert-mode  1)   ; reload files changed on disk
 (delete-selection-mode    1)   ; typing replaces selection
@@ -77,9 +81,10 @@
   (unless (file-exists-p dir) (make-directory dir t)))
 
 ;; Set indentation to 2 spaces specifically for Nix
+;; FIX: nix-indent-level does not exist; the correct variable is nix-indent-offset.
 (add-hook 'nix-mode-hook
           (lambda ()
-            (setq nix-indent-level 2)
+            (setq nix-indent-offset 2)
             (setq tab-width 2)
             (setq indent-tabs-mode nil)))
 
@@ -132,9 +137,20 @@
         which-key-sort-order           'which-key-key-order-alpha
         which-key-max-display-columns  4))
 
+;;; ── Undo ─────────────────────────────────────────────────────────────────────
+
+;; FIX: Emacs's native undo model treats undo operations as regular commands
+;; that can be redone, causing "u" to silently reverse direction mid-sequence.
+;; undo-fu provides a proper linear undo/redo model.
+(use-package undo-fu)
+
+(use-package undo-fu-session
+  :config (undo-fu-session-global-mode))  ; persist undo history across sessions
+
 ;;; ── Meow (modal editing) ─────────────────────────────────────────────────────
 
 (use-package meow
+  :after undo-fu
   :config
   (defun meow-setup ()
     (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
@@ -253,7 +269,7 @@
      '("8" . meow-expand-8)
      '("9" . meow-expand-9)
      '("-" . negative-argument)
-     '(";" . meow-reverse)
+     '(";" . meow-reverse)        ; FIX: was double-bound; comment-line moved to M-;
      '("," . meow-inner-of-thing)
      '("." . meow-bounds-of-thing)
      '("[" . meow-beginning-of-thing)
@@ -291,8 +307,8 @@
      '("R" . meow-swap-grab)
      '("s" . meow-kill)
      '("t" . meow-till)
-     '("u" . meow-undo)
-     '("U" . meow-undo-in-selection)
+     '("u" . undo-fu-only-undo)   ; FIX: was meow-undo (broken Emacs undo model)
+     '("U" . undo-fu-only-redo)   ; FIX: was meow-undo-in-selection
      '("v" . meow-visit)
      '("w" . meow-mark-word)
      '("W" . meow-mark-symbol)
@@ -302,9 +318,10 @@
      '("Y" . meow-sync-grab)
      '("z" . meow-pop-selection)
      '("'" . repeat)
-     '(";" . comment-line)
+     '("M-;" . comment-line)      ; FIX: moved here from ";" to free it for meow-reverse
      '("<escape>" . ignore)))
-  (setq meow-keypad-threshold 0.5)
+  ;; FIX: meow-keypad-threshold expects an integer; 0.5 is invalid.
+  (setq meow-keypad-threshold 1)
   (meow-setup)
   (meow-global-mode 1))
 
@@ -339,7 +356,7 @@
 
 (use-package consult
   :bind
-  (("/"   . consult-line)
+  (("M-/"   . consult-line)
    ("C-/" . consult-buffer)
    ("M-y"   . consult-yank-pop)
    ("M-g g" . consult-goto-line)
@@ -436,24 +453,35 @@
   (direnv-mode))
 
 ;; Better Eglot UI via eldoc box
+;; Note: eldoc-box-only-multiline avoids popup conflicts with corfu.
 (use-package eldoc-box
   :hook (eglot-managed-mode . eldoc-box-hover-mode)
   :config
   (setq eldoc-box-max-pixel-width  500
-        eldoc-box-max-pixel-height 300))
+        eldoc-box-max-pixel-height 300
+        eldoc-box-only-multiline   t))
 
 ;;; ── Language: Rust ───────────────────────────────────────────────────────────
 
+;; FIX: treesit-auto redirects .rs files to rust-ts-mode, so rust-mode's
+;; rust-format-on-save setting never fires. Format via eglot instead.
 (use-package rust-mode
-  :mode "\\.rs\\'"
-  :config
-  (setq rust-format-on-save t))
+  :mode "\\.rs\\'")
+
+(add-hook 'rust-ts-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook #'eglot-format-buffer nil t)))
 
 ;;; ── Language: Go ─────────────────────────────────────────────────────────────
 
+;; FIX: treesit-auto redirects .go files to go-ts-mode, so the before-save
+;; hook on go-mode never fires. Hook gofmt onto go-ts-mode instead.
 (use-package go-mode
-  :mode "\\.go\\'"
-  :hook (before-save . gofmt-before-save))
+  :mode "\\.go\\'")
+
+(add-hook 'go-ts-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook #'gofmt-before-save nil t)))
 
 ;;; ── Language: Nix ────────────────────────────────────────────────────────────
 
@@ -577,7 +605,7 @@
 ;; Restore window layout with C-c left/right
 (winner-mode 1)
 
-;; Dimm inactive windows
+;; Dim inactive windows
 (use-package dimmer
   :config
   (setq dimmer-fraction 0.25)

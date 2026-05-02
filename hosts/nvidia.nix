@@ -7,6 +7,8 @@
   hardware.nvidia = {
     # Use open kernel module for Turing+ GPUs (RTX 2000 series and newer)
     open = true;
+    # Beta should work better with latest kernel?
+    package = config.boot.kernelPackages.nvidiaPackages.beta;
 
     modesetting.enable = true;
     nvidiaSettings = true;

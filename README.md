@@ -6,20 +6,20 @@ Flake-based NixOS config with Fish shell, KDE Plasma 6, and devshells for Go and
 
 ```
 # 1. Clone
-git clone git@github.com:n70n10/my-nix.git
-cd my-nix
+git clone git@github.com:n70n10/nixfiles.git
+cd nixfiles
 
-# 2. Deploy to /etc/nixos
+# 2. Deploy to ~/nixos-config
 ./deploy
 
 # 3. Fill in your personal data
-$EDITOR /etc/nixos/nixsec/secrets.nix
+$EDITOR ~/nixos-config/nixsec/secrets.nix
 
 # 4. Generate hardware config (if not present)
-nixos-generate-config --show-hardware-config | sudo tee /etc/nixos/nixsec/hardware-configuration.nix > /dev/null
+nixos-generate-config --show-hardware-config | tee ~/nixos-config/nixsec/hardware-configuration.nix > /dev/null
 
 # 5. Build, switch, and activate Home Manager (may need #<hostmane> the 1st time)
-sudo nixos-rebuild switch --flake /etc/nixos
+sudo nixos-rebuild switch --flake ~/nixos-config
 ```
 
 ## File structure
@@ -36,7 +36,7 @@ sudo nixos-rebuild switch --flake /etc/nixos
 │   ├── amd.nix                        # AMD GPU + microcode
 │   └── nvidia.nix                     # NVIDIA GPU + proprietary driver
 ├── nixsec/
-│   ├── hardware-configuration.nix     # cp from /etc/nixos
+│   ├── hardware-configuration.nix     # cp from ~/nixos-config
 │   └── secrets.nix                    # Full name, email, locale etc.
 ├── dotfiles/                          # Standard dotfiles, symlinked to ~/.config
 │   ├── fish/
@@ -44,7 +44,7 @@ sudo nixos-rebuild switch --flake /etc/nixos
 ├── devshells/
 │   ├── go.nix                         # Go toolchain + tools
 │   └── rust.nix                       # Rust via rustup + tools
-├── deploy.sh                          # Syncs repo → /etc/nixos
+├── deploy.sh                          # Syncs repo → ~/nixos-config
 └── .gitignore
 
 ```
@@ -99,7 +99,7 @@ nix develop .#rust    # Rust environment
 Or use direnv — drop a `.envrc` in your project:
 
 ```
-use flake /etc/nixos#go
+use flake ~/nixos-config#go
 ```
 ## Fish aliases & functions
 
@@ -128,13 +128,6 @@ use flake /etc/nixos#go
 | `top` | `btop` |
 | `df` | `duf` |
 | `du` | `gdu` |
-
-**Editors**
-| Alias | Does |
-| --- | --- |
-| `mi` | `micro` |
-| `vi` / `vim` | `nvim` |
-| `sv` | `sudo nvim` |
 
 **Git**
 | Alias | Does |
@@ -194,7 +187,7 @@ use flake /etc/nixos#go
 **NixOS helpers**
 | Function | Does |
 | --- | --- |
-| `nrs [path] [host]` | `nh os switch` — defaults to `/etc/nixos` and current hostname |
+| `nrs [path] [host]` | `nh os switch` — defaults to `~/nixos-config` and current hostname |
 | `nrt [path] [host]` | `nh os test` — test a configuration without making it permanent |
 | `nrb [path] [host]` | `nh os boot` — build configuration for next boot |
 | `nup [path] [host]` | `nix flake update` + `nh os switch` — updates inputs and rebuilds in one step |
